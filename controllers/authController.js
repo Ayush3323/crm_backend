@@ -90,6 +90,16 @@ exports.login = async (req, res, next) => {
 
     sendTokenResponse(user, 200, res);
   } catch (error) {
+    console.error('Login error:', error);
+    
+    // Handle specific JWT errors
+    if (error.message === 'JWT configuration error') {
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error. Please contact administrator.'
+      });
+    }
+    
     next(error);
   }
 };

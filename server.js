@@ -26,15 +26,17 @@ const app = express();
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
+    ? [
+        'https://crmbackend-production-c8b1.up.railway.app' 
+      ]
     : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
   credentials: true
 }));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_WINDOW * 60 * 1000, // 15 minutes
-  max: process.env.RATE_LIMIT_MAX, // limit each IP to 100 requests per windowMs
+  windowMs: (process.env.RATE_LIMIT_WINDOW || 15) * 60 * 1000, 
+  max: process.env.RATE_LIMIT_MAX || 100, 
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api/', limiter);
