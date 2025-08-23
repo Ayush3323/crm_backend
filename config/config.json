@@ -29,8 +29,6 @@
     "port": {
       "ENV": "DB_PORT"
     },
-    "dialect": {
-      "ENV": "DB_DIALECT"
-    }
+    "dialect": "mysql"
   }
 }
