@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '..', 'config.env') });
 
 const common = {
   username: process.env.DB_USER,
