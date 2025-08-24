@@ -19,6 +19,6 @@ module.exports = {
   },
   production: {
     ...common,
-    port: 3306   // Inside Railway network: always 3306
+    port: process.env.DB_PORT || 55862   // Inside Railway network: always 3306
   }
 };
