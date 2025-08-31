@@ -88,19 +88,72 @@ exports.createTask = async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
-    const { title, description, assignedTo, deadline, priority, machine, category } = req.body;
+    const { 
+      title, 
+      description, 
+      assignedTo, 
+      employees, 
+      deadline, 
+      priority, 
+      machine, 
+      category,
+      estimatedHours,
+      location,
+      isRecurring,
+      recurringPattern
+    } = req.body;
+
+    console.log('Backend - Received request body:', {
+      title,
+      description,
+      assignedTo,
+      employees,
+      employeesType: typeof employees,
+      employeesIsArray: Array.isArray(employees),
+      deadline,
+      priority,
+      machine,
+      category,
+      estimatedHours,
+      location,
+      isRecurring,
+      recurringPattern
+    });
 
     // Validate required fields
-    if (!title || !description || !assignedTo) {
+    if (!title || !description || !assignedTo || !employees || employees.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Title, description, and assignedTo are required'
+        message: 'Title, description, assignedTo (Manager), and employees are required'
       });
     }
 
-    const assignedUser = await User.findOne({ where: { [Op.or]: [{ id: assignedTo }, { name: assignedTo }] } });
+    // Validate that assignedTo is a Manager
+    const assignedUser = await User.findOne({ 
+      where: { 
+        [Op.or]: [{ id: assignedTo }, { name: assignedTo }],
+        role: 'Manager'
+      } 
+    });
     if (!assignedUser) {
-      return res.status(404).json({ success: false, message: 'Assigned user not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Assigned user must be a Manager' 
+      });
+    }
+
+    // Validate that all employees exist and are Employees
+    const employeeUsers = await User.findAll({ 
+      where: { 
+        id: { [Op.in]: employees },
+        role: 'Employee'
+      } 
+    });
+    if (employeeUsers.length !== employees.length) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'One or more assigned employees not found or not employees' 
+      });
     }
 
     let machineId = null;
@@ -112,16 +165,42 @@ exports.createTask = async (req, res, next) => {
       machineId = machineInstance.id;
     }
 
+    console.log('Backend - Creating task with data:', {
+      title,
+      description,
+      assignedTo: assignedUser.id,
+      employees: employees,
+      deadline: deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      priority: priority || 'Medium',
+      machine: machineId,
+      category: category || 'Production',
+      estimatedHours: estimatedHours || 0,
+      location: location || '',
+      isRecurring: isRecurring || false,
+      recurringPattern: recurringPattern || 'Weekly',
+      createdBy: req.user.id
+    });
+
     const task = await Task.create({
       title,
       description,
       assignedTo: assignedUser.id,
+      employees: employees,
       deadline: deadline || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       priority: priority || 'Medium',
       machine: machineId,
-      category: category || 'Other',
-      employees: [assignedUser.id],
+      category: category || 'Production',
+      estimatedHours: estimatedHours || 0,
+      location: location || '',
+      isRecurring: isRecurring || false,
+      recurringPattern: recurringPattern || 'Weekly',
       createdBy: req.user.id
+    });
+
+    console.log('Backend - Task created successfully:', {
+      id: task.id,
+      employees: task.employees,
+      assignedTo: task.assignedTo
     });
 
     const createdTask = await Task.findByPk(task.id, {
@@ -130,6 +209,13 @@ exports.createTask = async (req, res, next) => {
         { model: User, as: 'createdByUser', attributes: ['id', 'name', 'email', 'role'] },
         { model: Machine, as: 'machineDetails', attributes: ['id', 'name', 'model', 'status'] }
       ]
+    });
+
+    console.log('Backend - Final response data:', {
+      id: createdTask.id,
+      employees: createdTask.employees,
+      assignedTo: createdTask.assignedTo,
+      assignedUser: createdTask.assignedUser?.id
     });
 
     res.status(201).json({
